@@ -14,6 +14,7 @@
 #define NEWS_PATH "./newspapers"
 #define RES_PATH "./output-data/results.txt"
 #define HASH_SIZE SHA256_DIGEST_LENGTH
+#define LIMIT 245
 #define NUM_TO_TICK 6
 #define MAX_NEWS_LEN 333
 
@@ -87,23 +88,28 @@ ssize_t write_grid(const unsigned char* grid) {
 
 void generate_grid(const unsigned char* hash, char* grid, const size_t grid_size) {
     int numbers[NUM_TO_TICK];
-    int count = 0;
+    size_t count = 0;
     int byte_idx = 0;
 
     while (count < NUM_TO_TICK && byte_idx < HASH_SIZE) {
-        int num = (hash[byte_idx] % 49) + 1;
+        unsigned char current_byte = hash[byte_idx];
 
-        int duplicate = 0;
-        for (int i = 0; i < count; i++) {
-            if (numbers[i] == num) {
-                duplicate = 1;
-                break;
+        if(current_byte < LIMIT) {
+            int num = (current_byte % 49) + 1;
+
+            int duplicate = 0;
+            for(size_t i = 0; i < count; i++) {
+                if(numbers[i] == num) {
+                    duplicate = 1;
+                    break;
+                }
+            }
+
+            if(!duplicate) {
+                numbers[count++] = num;
             }
         }
 
-        if (!duplicate) {
-            numbers[count++] = num;
-        }
         byte_idx++;
     }
 
@@ -117,11 +123,18 @@ void generate_grid(const unsigned char* hash, char* grid, const size_t grid_size
         }
     }
 
+    memset(grid, 0, grid_size);
     int pos = 0;
     for (int i = 0; i < NUM_TO_TICK; i++) {
         pos += snprintf(grid + pos, grid_size - pos, "%d ", numbers[i]);
     }
     write_grid(grid);
+}
+
+void simulate_newspaper(unsigned char* buffer, size_t length) {
+    for (size_t i = 0; i < length; i++) {
+        buffer[i] = (unsigned char)(rand() % 256);
+    }
 }
 
 int main() {
@@ -145,7 +158,7 @@ int main() {
     unsigned char xor_hash[HASH_SIZE];
     char grid[100];
 
-    printf("%s***VEILLE DU TIRAGE***\n%s", ORANGE, RESET);
+    printf("%s***VEILLE DU TIRAGE***%s", ORANGE, RESET);
 
     printf("\n*Sélection de l'article de journal...");
     unsigned char trimmed_newspaper[MAX_NEWS_LEN];
