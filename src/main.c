@@ -4,10 +4,17 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+#define GREEN "\x1B[32m"
+#define ORANGE "\x1B[38;5;208m"
+#define GREY "\x1B[90m"
+#define RESET "\x1B[0m"
+#define RED "\x1B[31m"
+
 #define RANDN_PATH "/dev/urandom"
 #define NEWS_PATH "./newspapers"
 #define HASH_SIZE SHA256_DIGEST_LENGTH
 #define NUM_TO_TICK 6
+#define MAX_NEWS_LEN 333
 
 ssize_t init_seed() {
     FILE* randn_gen_file = fopen(RANDN_PATH, "r");
@@ -24,7 +31,7 @@ ssize_t init_seed() {
 
 void print_hash(const unsigned char* hash, const size_t len) {
     for(size_t i=0; i<len; i++) {
-        printf("%02x", hash[i]);
+        printf("%s%02x%s", GREY, hash[i], RESET);
     }
 
     printf("\n");
@@ -127,24 +134,44 @@ int main() {
     unsigned char xor_hash[HASH_SIZE];
     char grid[100];
 
+    printf("%s***VEILLE DU TIRAGE***\n%s", ORANGE, RESET);
 
+    printf("\n*Sélection de l'article de journal...");
+    unsigned char trimmed_newspaper[MAX_NEWS_LEN];
+    strncpy(trimmed_newspaper, newspaper, MAX_NEWS_LEN);
+    printf("\n*L'article de journal sélectionné est:\n\"%s%s...%s\"\n", GREY, trimmed_newspaper, RESET);
+
+    printf("\n*Calcul du hash du secret D...\n");
     SHA256(secret, HASH_SIZE, secret_hash);
-    printf("Releasing secret hash to the public !\n");
+    printf("*Publication du hash du secret au public !\n");
+    printf("R=h(D)=");
     print_hash(secret_hash, HASH_SIZE);
 
+    printf("\n%s***JOUR DU TIRAGE***%s", ORANGE, RESET);
+    printf("\n*Calcul du hash du journal...\n");
     SHA256(newspaper, HASH_SIZE, news_hash);
-    printf("\nL'article de journal sélectionné est:\n%s\n", newspaper);
+    printf("S=h(J)=");
+    print_hash(news_hash, HASH_SIZE);
 
+    printf("\n*Calcul du xor entre le secret et le hash du journal...");
     xor_bytes(secret, news_hash, xor_res, HASH_SIZE);
-    printf("\nXOR result:\n");
+    printf("\n*XOR result:\n");
+    printf("D ⊕ S=");
     print_hash(xor_res, HASH_SIZE);
 
+    printf("\n*Calcul du hash du xor obtenu précédemment...");
     SHA256(xor_res, HASH_SIZE, xor_hash);
-    printf("\nXOR hash:\n");
+    printf("\n*XOR hash:\n");
+    printf("h(D ⊕ S)=");
     print_hash(xor_hash, HASH_SIZE);
 
+    printf("\n*Génération de la grille...\n");
     generate_grid(xor_hash, grid, 200);
-    printf("\nResulting grid: %s\n", grid);
+
+    printf("\n%s***LENDEMAIN DU TIRAGE***%s", ORANGE, RESET);
+    printf("\n*Grille générée: %s%s%s", RED, grid, RESET);
+    printf("\n*Secret initialement choisi:\n");
+    print_hash(secret, HASH_SIZE);
 
     free(newspaper);
 
