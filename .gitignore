@@ -1,3 +1,6 @@
 target/*
+venv
+output-data/*
+newspapers/*
 
 !.gitkeep

@@ -12,6 +12,7 @@
 
 #define RANDN_PATH "/dev/urandom"
 #define NEWS_PATH "./newspapers"
+#define RES_PATH "./output-data/results.txt"
 #define HASH_SIZE SHA256_DIGEST_LENGTH
 #define NUM_TO_TICK 6
 #define MAX_NEWS_LEN 333
@@ -44,46 +45,6 @@ void xor_bytes(const unsigned char* a, const unsigned char* b, unsigned char* re
     }
 }
 
-void generate_grid(const unsigned char* hash, char* grid, const size_t grid_size) {
-    size_t pos = strlen(grid);
-    int numbers[NUM_TO_TICK];
-
-    for(size_t i=0; i<NUM_TO_TICK; i++) {
-        int num;
-        int duplicate;
-
-        do {
-            num = (hash[rand()%HASH_SIZE] % 49) + 1;
-            duplicate = 0;
-
-            for(size_t j=0; j<i; j++) {
-                if(numbers[j] == num) {
-                    duplicate = 1;
-                    num = (hash[rand()%HASH_SIZE] % 49) + 1;
-                    break;
-                }
-            }
-        } while(duplicate);
-
-        numbers[i] = num;
-    }
-
-    for(size_t i=0; i<NUM_TO_TICK-1; i++) {
-        for(size_t j=i+1; j<NUM_TO_TICK; j++) {
-            if(numbers[i] > numbers[j]) {
-                const int tmp = numbers[i];
-                numbers[i] = numbers[j];
-                numbers[j] = tmp;
-            }
-        }
-
-    }
-
-    for(size_t i=0; i<NUM_TO_TICK; i++) {
-        pos += snprintf(grid + pos, grid_size - pos, "%d ", numbers[i]);
-    }
-}
-
 char* read_file(const char* filename) {
     FILE* file = fopen(filename, "r");
     if (!file) {
@@ -111,6 +72,56 @@ char* read_file(const char* filename) {
     fclose(file);
 
     return buffer;
+}
+
+ssize_t write_grid(const unsigned char* grid) {
+    FILE* output = fopen(RES_PATH, "a");
+    if(output != NULL) {
+        fprintf(output, "%s\n", grid);
+        fclose(output);
+        return 1;
+    } else {
+        printf("%s[Error]%s Could not open output file to write grid.\n", RED, RESET);
+    }
+}
+
+void generate_grid(const unsigned char* hash, char* grid, const size_t grid_size) {
+    int numbers[NUM_TO_TICK];
+    int count = 0;
+    int byte_idx = 0;
+
+    while (count < NUM_TO_TICK && byte_idx < HASH_SIZE) {
+        int num = (hash[byte_idx] % 49) + 1;
+
+        int duplicate = 0;
+        for (int i = 0; i < count; i++) {
+            if (numbers[i] == num) {
+                duplicate = 1;
+                break;
+            }
+        }
+
+        if (!duplicate) {
+            numbers[count++] = num;
+        }
+        byte_idx++;
+    }
+
+    for (int i = 0; i < NUM_TO_TICK - 1; i++) {
+        for (int j = i + 1; j < NUM_TO_TICK; j++) {
+            if (numbers[i] > numbers[j]) {
+                int tmp = numbers[i];
+                numbers[i] = numbers[j];
+                numbers[j] = tmp;
+            }
+        }
+    }
+
+    int pos = 0;
+    for (int i = 0; i < NUM_TO_TICK; i++) {
+        pos += snprintf(grid + pos, grid_size - pos, "%d ", numbers[i]);
+    }
+    write_grid(grid);
 }
 
 int main() {
